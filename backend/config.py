@@ -1,6 +1,9 @@
+import os
 class Config:
     # SQLALCHEMY_DATABASE_URI = 'mysql+pymysql://root:yqw123456@localhost/community?charset=utf8mb4'
     SQLALCHEMY_DATABASE_URI = 'd1://59c23280-ed64-4932-a259-96423d8d93f6/community'
+    D1_API_TOKEN = os.environ.get('CF_API_TOKEN')  # 这里使用 CF_API_TOKEN
+
     SQLALCHEMY_TRACK_MODIFICATIONS = False
     # 添加SQLite多线程支持
     # SQLALCHEMY_ENGINE_OPTIONS = {
