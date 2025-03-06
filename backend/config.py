@@ -1,8 +1,16 @@
 import os
 
+# 获取当前文件所在目录的绝对路径（backend 目录）
+basedir = os.path.abspath(os.path.dirname(__file__))
+# 创建 backend/instance 目录的路径
+instance_path = os.path.join(basedir, 'instance')
+
+# 确保 backend/instance 目录存在
+os.makedirs(instance_path, exist_ok=True)
+
 class Config:
-    # 使用 SQLite 作为数据库引擎
-    SQLALCHEMY_DATABASE_URI = 'sqlite:///instance/community.db'
+    # 使用绝对路径指定数据库文件位置到 backend/instance/community.db
+    SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(instance_path, "community.db")}'
     
     # D1 相关配置（保留但暂时不使用）
     D1_DATABASE_ID = '59c23280-ed64-4932-a259-96423d8d93f6'
