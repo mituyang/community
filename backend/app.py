@@ -2409,52 +2409,75 @@ def get_my_shares():
         print(f"获取转发列表失败: {str(e)}")
         return jsonify({'error': '获取转发列表失败'}), 500
 
-# 初始化 SocketIO
+# Socket.IO 配置
 socketio = SocketIO(app, 
     cors_allowed_origins=[
         "https://www.searchsomething.top",
         "https://api.searchsomething.top"
     ],  
-    cors_credentials=True,  # 添加这个
-    async_mode='threading',  # 使用线程模式
-    logger=True,  # 启用日志
-    engineio_logger=True  # 启用 Engine.IO 日志
+    cors_credentials=True,
+    async_mode='threading',
+    logger=True,
+    engineio_logger=True,
+    ping_timeout=60,  # 添加超时配置
+    ping_interval=25,  # 添加心跳间隔
+    manage_session=False  # 禁用 Flask-SocketIO 的会话管理
 )
 
 # 存储用户连接
 user_connections = {}
 
+# 修改连接处理函数
 @socketio.on('connect')
 def handle_connect():
     try:
         # 从请求头获取 token
         auth = request.args.get('auth')
         if not auth:
-            print("No auth provided")
+            print("No auth token provided")
             return False
         
         # 移除 "Bearer " 前缀
         token = auth.replace('Bearer ', '') if auth.startswith('Bearer ') else auth
         
-        # 解析 token 获取用户 ID
         try:
+            # 验证 token
             decoded_token = decode_token(token)
             current_user_id = decoded_token['sub']
             
             # 存储用户连接
             user_connections[current_user_id] = request.sid
             print(f"User {current_user_id} connected with sid {request.sid}")
+            
+            # 发送连接成功事件
+            emit('connect_success', {'message': 'Connected successfully'})
             return True
             
         except Exception as e:
             print(f"Token decode error: {str(e)}")
-            traceback.print_exc()  # 添加堆栈跟踪
+            traceback.print_exc()
             return False
             
     except Exception as e:
         print(f"Connection error: {str(e)}")
-        traceback.print_exc()  # 添加堆栈跟踪
+        traceback.print_exc()
         return False
+
+# 添加错误处理
+@socketio.on_error()
+def error_handler(e):
+    print(f"SocketIO error: {str(e)}")
+    traceback.print_exc()
+
+# 添加重连事件处理
+@socketio.on('reconnect')
+def handle_reconnect():
+    print("Client attempting to reconnect")
+    return True
+
+@socketio.on('reconnect_error')
+def handle_reconnect_error(error):
+    print(f"Reconnection error: {str(error)}")
 
 @socketio.on('disconnect')
 def handle_disconnect():
