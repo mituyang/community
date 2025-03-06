@@ -25,6 +25,8 @@ import os
 
 app = Flask(__name__)
 app.config.from_object(Config)
+
+# 更新 CORS 配置
 CORS(app, resources={
     r"/api/*": {
         "origins": [
@@ -38,10 +40,16 @@ CORS(app, resources={
             "authorization",  # 添加小写的 authorization
             "Access-Control-Allow-Headers",
             "Access-Control-Allow-Origin",
-            "Access-Control-Allow-Methods"
+            "Access-Control-Allow-Methods",
+            "Access-Control-Allow-Credentials"  # 添加这个
         ],
-        "expose_headers": ["Authorization"],
-        "supports_credentials": True
+        "expose_headers": [
+            "Authorization",
+            "Content-Type",
+            "Access-Control-Allow-Credentials"
+        ],
+        "supports_credentials": True,
+        "max_age": 600  # 添加预检请求的缓存时间
     }
 })
 
@@ -2407,6 +2415,7 @@ socketio = SocketIO(app,
         "https://www.searchsomething.top",
         "https://api.searchsomething.top"
     ],  
+    cors_credentials=True,  # 添加这个
     async_mode='threading',  # 使用线程模式
     logger=True,  # 启用日志
     engineio_logger=True  # 启用 Engine.IO 日志
