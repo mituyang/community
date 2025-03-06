@@ -1,7 +1,7 @@
 from datetime import datetime, timedelta
 from flask_sqlalchemy import SQLAlchemy
 from pytz import timezone
-from sqlalchemy import CheckConstraint
+from sqlalchemy import CheckConstraint, Text
 import traceback
 
 db = SQLAlchemy()
@@ -9,19 +9,24 @@ db = SQLAlchemy()
 CHINA_TZ = timezone('Asia/Shanghai')
 
 class User(db.Model):
+    __tablename__ = 'users'  # 显式指定表名
+    
     id = db.Column(db.Integer, primary_key=True)
     username = db.Column(db.String(80), unique=True, nullable=False)
     password = db.Column(db.String(120), nullable=False)
     email = db.Column(db.String(120), unique=True)
     nickname = db.Column(db.String(80))
     avatar = db.Column(db.String(255))
-    gender = db.Column(db.Enum('male', 'female', 'secret'), default='secret')
-    birthday = db.Column(db.Date)
+    # D1 不支持 ENUM，改用 STRING
+    gender = db.Column(db.String(10), default='secret')  
+    birthday = db.Column(db.Date, nullable=True)
     location = db.Column(db.String(100))
     website = db.Column(db.String(255))
     bio = db.Column(db.Text)
+    # SQLite 存储 UTC 时间
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
-    # 添加与帖子的关系
+    
+    # 保持关系定义不变
     posts = db.relationship('Post', backref='author', lazy=True)
     
     # 添加关注功能的帮助方法
@@ -62,10 +67,12 @@ class User(db.Model):
         return Follow.query.filter_by(follower_id=self.id).count()
 
 class Post(db.Model):
+    __tablename__ = 'posts'
+    
     id = db.Column(db.Integer, primary_key=True)
     title = db.Column(db.String(100), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # 获取总浏览量的方法
@@ -78,8 +85,8 @@ class Follow(db.Model):
     __tablename__ = 'follows'
     
     id = db.Column(db.Integer, primary_key=True)
-    follower_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    following_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    follower_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    following_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     __table_args__ = (
@@ -91,59 +98,58 @@ class Follow(db.Model):
     following = db.relationship('User', foreign_keys=[following_id], backref=db.backref('followers', lazy='dynamic'))
 
 class PostView(db.Model):
-    __tablename__ = 'post_view'
+    __tablename__ = 'post_views'
+    
     id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), unique=True, nullable=False)
-    author_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), unique=True, nullable=False)
+    author_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     view_count = db.Column(db.Integer, default=0)
     last_viewed_at = db.Column(db.DateTime, default=datetime.utcnow)
 
-    # 修改关联关系，使用不同的名称
     post = db.relationship('Post', backref=db.backref('view_record', uselist=False))
     author = db.relationship('User', foreign_keys=[author_id], backref='authored_views')
     viewer = db.relationship('User', foreign_keys=[user_id], backref='viewed_posts')
 
 class PostLike(db.Model):
-    __tablename__ = 'post_like'
+    __tablename__ = 'post_likes'
     
     id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(CHINA_TZ))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     __table_args__ = (
         db.UniqueConstraint('post_id', 'user_id', name='unique_post_user_like'),
     )
 
 class PostComment(db.Model):
-    __tablename__ = 'post_comment'
+    __tablename__ = 'post_comments'
     
     id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(CHINA_TZ))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     user = db.relationship('User', backref='comments')
 
 class PostShare(db.Model):
-    __tablename__ = 'post_share'
+    __tablename__ = 'post_shares'
     
     id = db.Column(db.Integer, primary_key=True)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(CHINA_TZ))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
 class CommentLike(db.Model):
-    __tablename__ = 'comment_like'
+    __tablename__ = 'comment_likes'
     
     id = db.Column(db.Integer, primary_key=True)
-    comment_id = db.Column(db.Integer, db.ForeignKey('post_comment.id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(CHINA_TZ))
+    comment_id = db.Column(db.Integer, db.ForeignKey('post_comments.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # 添加关系
     comment = db.relationship('PostComment', backref=db.backref('likes', lazy='dynamic', cascade='all, delete-orphan'))
     user = db.relationship('User', backref=db.backref('comment_likes', lazy='dynamic'))
     
@@ -152,14 +158,13 @@ class CommentLike(db.Model):
     )
 
 class CommentShare(db.Model):
-    __tablename__ = 'comment_share'
+    __tablename__ = 'comment_shares'
     
     id = db.Column(db.Integer, primary_key=True)
-    comment_id = db.Column(db.Integer, db.ForeignKey('post_comment.id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(CHINA_TZ))
+    comment_id = db.Column(db.Integer, db.ForeignKey('post_comments.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # 添加关系
     comment = db.relationship('PostComment', backref=db.backref('shares', lazy='dynamic', cascade='all, delete-orphan'))
     user = db.relationship('User', backref=db.backref('comment_shares', lazy='dynamic'))
     
@@ -168,15 +173,14 @@ class CommentShare(db.Model):
     )
 
 class CommentReply(db.Model):
-    __tablename__ = 'comment_reply'
+    __tablename__ = 'comment_replies'
     
     id = db.Column(db.Integer, primary_key=True)
-    parent_comment_id = db.Column(db.Integer, db.ForeignKey('post_comment.id', ondelete='CASCADE'), nullable=False)
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id', ondelete='CASCADE'), nullable=False)
+    parent_comment_id = db.Column(db.Integer, db.ForeignKey('post_comments.id', ondelete='CASCADE'), nullable=False)
+    user_id = db.Column(db.Integer, db.ForeignKey('users.id', ondelete='CASCADE'), nullable=False)
     content = db.Column(db.Text, nullable=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(CHINA_TZ))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # 添加关系
     parent_comment = db.relationship('PostComment', backref=db.backref('replies', lazy='dynamic', cascade='all, delete-orphan'))
     user = db.relationship('User', backref=db.backref('comment_replies', lazy='dynamic'))
 
@@ -184,21 +188,20 @@ class Notification(db.Model):
     __tablename__ = 'notifications'
     
     id = db.Column(db.Integer, primary_key=True)
-    recipient_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-    sender_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
+    recipient_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
+    sender_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     type = db.Column(db.String(20), nullable=False)
-    post_id = db.Column(db.Integer, db.ForeignKey('post.id'))
-    comment_id = db.Column(db.Integer, db.ForeignKey('post_comment.id'))
+    post_id = db.Column(db.Integer, db.ForeignKey('posts.id'))
+    comment_id = db.Column(db.Integer, db.ForeignKey('post_comments.id'))
     content = db.Column(db.Text)
     is_read = db.Column(db.Boolean, default=False)
-    created_at = db.Column(db.DateTime, default=lambda: datetime.now(CHINA_TZ))
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
-    # 添加数据库级别的约束
-    __table_args__ = (
-        db.CheckConstraint('recipient_id <> sender_id', name='check_no_self_notification'),
-    )
+    # SQLite 不支持 CHECK 约束，但我们可以在应用层面处理
+    # __table_args__ = (
+    #     db.CheckConstraint('recipient_id <> sender_id', name='check_no_self_notification'),
+    # )
     
-    # 关系
     recipient = db.relationship('User', foreign_keys=[recipient_id], backref='received_notifications')
     sender = db.relationship('User', foreign_keys=[sender_id], backref='sent_notifications')
     post = db.relationship('Post', backref='notifications')
