@@ -70,8 +70,13 @@ export const useUserStore = defineStore('user', () => {
     }
 
     socket.value = io('https://api.searchsomething.top', {
-      query: {
-        auth: `Bearer ${token.value}`
+      path: '/socket.io',
+      transports: ['websocket', 'polling'],
+      auth: {
+        token: token.value
+      },
+      extraHeaders: {
+        Authorization: `Bearer ${token.value}`
       }
     })
 
