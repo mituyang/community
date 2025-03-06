@@ -29,9 +29,19 @@ CORS(app, resources={
     r"/api/*": {
         "origins": [
             "https://www.searchsomething.top",
-            "https://api.searchsomething.top"],
+            "https://api.searchsomething.top",
+        ],
         "methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"]
+        "allow_headers": [
+            "Content-Type", 
+            "Authorization",
+            "authorization",  # 添加小写的 authorization
+            "Access-Control-Allow-Headers",
+            "Access-Control-Allow-Origin",
+            "Access-Control-Allow-Methods"
+        ],
+        "expose_headers": ["Authorization"],
+        "supports_credentials": True
     }
 })
 
