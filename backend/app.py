@@ -2,25 +2,22 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, decode_token
 from flask_mail import Mail, Message
-from models import User, Post, PostView, PostLike, PostComment, PostShare, Follow, CommentLike, CommentShare, CommentReply, Notification
+from models import  User, Post, PostLike, PostComment,  Notification
 from config import Config
 from werkzeug.security import generate_password_hash, check_password_hash
 import random
 import string
-from datetime import datetime, timedelta
+from datetime import  timedelta
 import redis
 import traceback
 import pytz
 from flask_migrate import Migrate
 from redis import Redis
-from sqlalchemy import func, distinct, text
 from pytz import timezone
 from sqlalchemy import or_
 import jwt as pyjwt  # 重命名为pyjwt以避免冲突
 from flask_socketio import SocketIO, emit
 from fakeredis import FakeStrictRedis
-from sqlalchemy import event  
-from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import os
 import requests
 
