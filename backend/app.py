@@ -22,6 +22,8 @@ from fakeredis import FakeStrictRedis
 from sqlalchemy import event  
 from sqlalchemy.exc import SQLAlchemyError, IntegrityError
 import os
+import requests
+import json
 
 app = Flask(__name__)
 app.config.from_object(Config)
@@ -240,6 +242,41 @@ def register():
         db.session.rollback()
         return jsonify({'error': '注册失败'}), 500
 
+# D1 数据库操作类
+class D1Database:
+    def __init__(self, database_id, api_token):
+        self.database_id = database_id
+        self.api_token = api_token
+        self.base_url = f'https://api.cloudflare.com/client/v4/accounts/{database_id}/d1/query'
+        self.headers = {
+            'Authorization': f'Bearer {api_token}',
+            'Content-Type': 'application/json'
+        }
+
+    def execute(self, query, params=None):
+        data = {
+            'sql': query,
+            'params': params or []
+        }
+        
+        response = requests.post(
+            self.base_url,
+            headers=self.headers,
+            json=data
+        )
+        
+        if response.status_code == 200:
+            return response.json()['result']
+        else:
+            raise Exception(f"D1 query failed: {response.text}")
+
+# 初始化 D1 数据库连接
+d1_db = D1Database(
+    database_id=app.config['D1_DATABASE_ID'],
+    api_token=app.config['D1_API_TOKEN']
+)
+
+# 更新数据库操作相关的路由
 @app.route('/api/login', methods=['POST'])
 def login():
     try:
