@@ -2,7 +2,7 @@ from flask import Flask, request, jsonify
 from flask_cors import CORS
 from flask_jwt_extended import JWTManager, create_access_token, jwt_required, get_jwt_identity, decode_token
 from flask_mail import Mail, Message
-from models import db, User, Post, PostView, PostLike, PostComment, PostShare, Follow, CommentLike, CommentShare, CommentReply, Notification
+from models import User, Post, PostView, PostLike, PostComment, PostShare, Follow, CommentLike, CommentShare, CommentReply, Notification
 from config import Config
 from werkzeug.security import generate_password_hash, check_password_hash
 import random
