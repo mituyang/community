@@ -9,25 +9,13 @@ instance_path = os.path.join(basedir, 'instance')
 os.makedirs(instance_path, exist_ok=True)
 
 class Config:
-    # 使用绝对路径指定数据库文件位置到 backend/instance/community.db
-    SQLALCHEMY_DATABASE_URI = f'sqlite:///{os.path.join(instance_path, "community.db")}'
-    
-    # D1 相关配置（保留但暂时不使用）
+    # 移除 SQLite 配置，改用 D1 配置
+    DATABASE_URL = os.environ.get('DATABASE_URL', 'https://api.cloudflare.com/client/v4/accounts/{account_id}/d1/database/{database_id}')
     D1_DATABASE_ID = '59c23280-ed64-4932-a259-96423d8d93f6'
     D1_API_TOKEN = os.environ.get('CF_API_TOKEN')
-
-    SQLALCHEMY_TRACK_MODIFICATIONS = False
     
-    # 添加 SQLite 多线程支持
-    SQLALCHEMY_ENGINE_OPTIONS = {
-        'connect_args': {
-            'check_same_thread': False  
-        }
-    }
-    
-    JWT_SECRET_KEY = 'yqw123456'  # 请更改为复杂的密钥
-    
-    # 邮件配置保持不变
+    # 保持其他配置不变
+    JWT_SECRET_KEY = 'yqw123456'
     MAIL_SERVER = 'smtp.qq.com'
     MAIL_PORT = 465
     MAIL_USE_SSL = True
